@@ -15,7 +15,7 @@ RUN npm --prefix frontend run build
 # Backend: install dependencies
 COPY backend/package.json backend/package.json
 COPY backend/package-lock.json backend/package-lock.json
-RUN npm --prefix backend ci --omit=dev
+RUN npm --prefix backend install --omit=dev
 COPY backend backend
 
 # Stage 2: Final runtime image
