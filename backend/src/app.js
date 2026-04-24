@@ -14,8 +14,12 @@ const app = express();
 app.set('etag', false);
 
 // Middlewares globales
+const corsOrigin = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
+  : true; // true = refleja el Origin; útil en Vercel sin hardcodear dominios
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: corsOrigin,
   credentials: true,
 }));
 app.use(express.json());
@@ -39,6 +43,19 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, message: '💈 Barbería API funcionando', time: new Date() });
 });
 
+// Serve frontend static files in production
+const path = require('path');
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  app.use(express.static(frontendPath));
+  
+  // Fallback para SPA (cualquier ruta que no sea /api va al index.html)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+}
+
 // 404
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Endpoint no encontrado' });
@@ -48,9 +65,14 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`📊 ENV: ${process.env.NODE_ENV}`);
-});
+
+// Solo levantar HTTP server en modo "node src/app.js" (desarrollo/producción tradicional).
+// En Vercel (serverless) el handler importa el app y NO debe hacer listen.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`📊 ENV: ${process.env.NODE_ENV}`);
+  });
+}
 
 module.exports = app;

@@ -1,7 +1,25 @@
 import axios from 'axios';
 
+const normalizeApiBaseUrl = (rawBaseUrl) => {
+  const trimmed = (rawBaseUrl || '').trim().replace(/\/+$/, '');
+  if (!trimmed) return '';
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+};
+
+const resolvedBaseURL = (() => {
+  const envBase = normalizeApiBaseUrl(import.meta.env.VITE_API_URL);
+  if (envBase) return envBase;
+
+  // Sin variable en local: usar backend local.
+  if (import.meta.env.DEV) return 'http://localhost:5000/api';
+
+  // En Vercel, si desplegas frontend+backend juntos con vercel.json,
+  // el backend queda disponible en el mismo dominio bajo /api.
+  return '/api';
+})();
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: resolvedBaseURL,
   headers: { 'Content-Type': 'application/json' },
 });
 
